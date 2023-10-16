@@ -3,6 +3,7 @@ Close-domain QA Pipeline
 '''
 
 import argparse
+import os
 from toolbench.inference.Downstream_tasks.rapidapi import pipeline_runner
 
 
@@ -26,8 +27,12 @@ if __name__ == "__main__":
     parser.add_argument('--rapidapi_key', type=str, default="",required=False, help='your rapidapi key to request rapidapi service')
     parser.add_argument('--use_rapidapi_key', action="store_true", help="To use customized rapidapi service or not.")
     parser.add_argument('--api_customization', action="store_true", help="To use customized api or not.")
+    parser.add_argument("--override", action="store_true", help="Override the output file or not.")
     
     args = parser.parse_args()
+    if args.override and os.path.exists(args.output_answer_file):
+        import shutil
+        shutil.rmtree(args.output_answer_file)
 
     pipeline_runner = pipeline_runner(args)
     pipeline_runner.run()

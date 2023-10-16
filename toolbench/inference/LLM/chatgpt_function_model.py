@@ -3,11 +3,13 @@ import openai
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 from termcolor import colored
 import time
+import traceback
 import random
+openai.api_base="https://api.01ww.xyz/v1"
 
 
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(3))
-def chat_completion_request(key, messages, functions=None,function_call=None,key_pos=None, model="gpt-3.5-turbo-16k-0613",stop=None,process_id=0, **args):
+def chat_completion_request(key, messages, functions=None,function_call=None,key_pos=None, model="gpt-3.5-turbo-16k",stop=None,process_id=0, **args):
     use_messages = []
     for message in messages:
         if not("valid" in message.keys() and message["valid"] == False):
@@ -29,19 +31,22 @@ def chat_completion_request(key, messages, functions=None,function_call=None,key
         json_data.update({"function_call": function_call})
     
     try:
-        if model == "gpt-3.5-turbo-16k-0613":
+        if model == "gpt-3.5-turbo-16k":
             openai.api_key = key
         else:
             raise NotImplementedError
+        # print(json_data)
         openai_response = openai.ChatCompletion.create(
             **json_data,
         )
+        # print(openai_response)
         json_data = json.loads(str(openai_response))
         return json_data 
 
     except Exception as e:
         print("Unable to generate ChatCompletion response")
         print(f"OpenAI calling Exception: {e}")
+        traceback.print_exc()
         return e
 
 class ChatGPTFunction:
@@ -112,7 +117,8 @@ class ChatGPTFunction:
         return {"role": "assistant", "content": str(json_data)}, -1, 0
 
 if __name__ == "__main__":
-    llm = ChatGPTFunction()
+    
+    llm = ChatGPTFunction(openai_key="openchat")
     prompt = '''下面这句英文可能有语病，能不能把语病都改掉？
 If you think you get the result which can answer the task, call this function to give the final answer. Or, if you think you can't handle the task from this status, call this function to restart. Remember: you should ALWAYS call this function at the end of your try, and the final answer is the ONLY part that will be showed to user, so final answer should contain enough information.
 没语病的形式：

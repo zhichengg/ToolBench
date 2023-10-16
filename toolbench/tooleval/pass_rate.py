@@ -82,10 +82,10 @@ if __name__=='__main__':
     for file in os.listdir(input_dir):
         if "result" in file:
             continue
-        pattern = r"(\d+)_([^_]+)_(.+)\.json"
+        pattern = r"(.+)_([^_]+)_(.+)\.json"
         re_result = re.match(pattern,file)
         if re_result == None or "DFS" in (re_result.group(3) + "_" + re_result.group(2)):
-            pattern2 = r"(\d+)_(.+)\.json"
+            pattern2 = r"(.+)_(.+)\.json"
             re_result = re.match(pattern2,file)
             idx = re_result.group(1)
             method = re_result.group(2)

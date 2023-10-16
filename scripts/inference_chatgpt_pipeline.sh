@@ -1,6 +1,7 @@
-export TOOLBENCH_KEY=""
-export OUTPUT_DIR="data/answer/chatgpt_dfs"
-export OPENAI_KEY=""
+export TOOLBENCH_KEY="xud2dQdMNE8MRlkwBTe5DYB0DkktPi1uiCnyteptzmg3gS7Bbz"
+export OUTPUT_DIR="data/answer/chatgpt_dfs_2"
+export OPENAI_API_BASE="https://api.01ww.xyz/v1" 
+export OPENAI_KEY="openchat"
 export PYTHONPATH=./
 
 mkdir $OUTPUT_DIR

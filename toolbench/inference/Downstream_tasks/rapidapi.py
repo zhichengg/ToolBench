@@ -344,13 +344,15 @@ You have access of the following tools:\n'''
                         print(colored(f"query to {self.cate_names[k]}-->{self.tool_names[k]}-->{action_name}",color="yellow"))
                     if self.use_rapidapi_key or self.api_customization:
                         payload["rapidapi_key"] = self.rapidapi_key
-                        response = get_rapidapi_response(payload, api_customization=self.api_customization)
+                        response = get_rapidapi_response(payload, api_customization=self.api_customization, tools_root=self.tool_root_dir.replace("/", "."))
                     else:
                         time.sleep(2) # rate limit: 30 per minute
                         headers = {"toolbench_key": self.toolbench_key}
                         response = requests.post(self.service_url, json=payload, headers=headers, timeout=15)
                         if response.status_code != 200:
-                            return json.dumps({"error": f"request invalid, data error. status_code={response.status_code}", "response": ""}), 12
+                            print(response)
+                            # import pdb; pdb.set_trace()
+                            return json.dumps({"error": f"request invalid, data error. status_code={response.status_code}", "response": "", "payload": payload}), 12
                         try:
                             response = response.json()
                         except:
@@ -422,7 +424,7 @@ class pipeline_runner:
         query_dir = args.input_query_file
         answer_dir = args.output_answer_file
         if not os.path.exists(answer_dir):
-            os.mkdir(answer_dir)
+            os.makedirs(answer_dir)
         method = args.method
         backbone_model = self.get_backbone_model()
         white_list = get_white_list(args.tool_root_dir)
