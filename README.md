@@ -18,7 +18,7 @@
   <a href="#data">Data Release</a> •
   <a href="#web-ui">Web Demo</a> •
   <a href="#tool-eval">Tool Eval</a> •
-  <a href="assets/paper.pdf">Paper</a> •
+  <a href="https://arxiv.org/pdf/2307.16789.pdf">Paper</a> •
   <a href="#citation">Citation</a>
 
 </p>
@@ -130,7 +130,7 @@ The file structure is as follows:
 │  ├── ...
 │  └── /toolllama_dfs/
 ```
-Here is some descriptions for the `data` directory:
+Here are some descriptions for the `data` directory:
 - `instruction` and `answer`: The instruction data and solution path annotation data. `G1`,`G2`, `G3` refers to single-tool, intra-category multi-tool and intra-collection multi-tool data respectively. We also have an [Atlas Explorer](https://atlas.nomic.ai/map/58aca169-c29a-447a-8f01-0d418fc4d341/030ddad7-5305-461c-ba86-27e1ca79d899) for visualization.
 - `toolenv`: The tool environment related data, containing API jsons, API codes and API example responses.
 - `retrieval`: The data used for tool retrieval is included in this directory.
@@ -259,7 +259,7 @@ deepspeed --master_port=20001 toolbench/train/train_lora.py \
     --source_model_max_length 2048 \
     --model_max_length 8192 \
     --gradient_checkpointing True \
-    --lazy_preprocess True \    
+    --lazy_preprocess True \
     --deepspeed ds_configs/stage2.json \
     --report_to none
 ```
@@ -577,7 +577,7 @@ python eval_pass_rate.py \
     --reference_model ${CANDIDATE_MODEL} \
     --test_ids ../../data/test_ids/ \
     --max_eval_threads 20 \
-    --evaluate_times 4
+    --evaluate_times 7
 
 ```
 The result files will be stored under the ${SAVE_PATH}.
@@ -600,7 +600,7 @@ python eval_preference.py \
     --pass_rate_result_path ${PASS_TARE_PATH} \
     --max_eval_threads 20 \
     --use_pass_rate true \
-    --evaluate_times 4
+    --evaluate_times 7
 ```
 The result files will be stored under the ${SAVE_PATH}.
 

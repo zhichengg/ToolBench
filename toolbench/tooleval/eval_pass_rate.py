@@ -172,12 +172,8 @@ if __name__ == "__main__":
         pass_rate = 0
         number_of_random = 0
         for query_id in label_cnt:
-            if label_cnt[query_id]["failed"] < label_cnt[query_id]["passed"]:
+            if label_cnt[query_id]["failed"] <= label_cnt[query_id]["passed"]:
                 pass_rate += 1
-            elif label_cnt[query_id]["failed"] == label_cnt[query_id]["passed"]:
-                number_of_random += 1
-                if random.random() < 0.5:
-                    pass_rate += 1
         pass_rate /= len(label_cnt)
         print(f"Test set: {test_set}. Model: {reference_model}. Pass rate: {str(pass_rate)} Number of unsure: {number_of_random}")
         results_filename = f"{args.save_path}/{test_set}_{reference_model}.log"

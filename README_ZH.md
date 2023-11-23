@@ -271,7 +271,7 @@ deepspeed --master_port=20001 toolbench/train/train_lora.py \
     --source_model_max_length 2048 \
     --model_max_length 8192 \
     --gradient_checkpointing True \
-    --lazy_preprocess True \    
+    --lazy_preprocess True \
     --deepspeed ds_configs/stage2.json \
     --report_to none
 ```
@@ -585,7 +585,7 @@ python eval_pass_rate.py \
     --reference_model ${CANDIDATE_MODEL} \
     --test_ids ../../data/test_query_ids/ \
     --max_eval_threads 20 \
-    --evaluate_times 4
+    --evaluate_times 7
 
 ```
 
@@ -609,7 +609,7 @@ python eval_preference.py \
     --pass_rate_result_path ${PASS_TARE_PATH} \
     --max_eval_threads 20 \
     --use_pass_rate true \
-    --evaluate_times 4
+    --evaluate_times 7
 ```
 
 结果文件会被存储至${SAVE_PATH}中。
