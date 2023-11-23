@@ -81,8 +81,8 @@ def run(toolbench_code_string, toolbench_api_name, toolbench_input_params_str):
     success_flag = False
     switch_flag = False
     save_cache = False
-    exec(toolbench_code_string)
     try:
+        exec(toolbench_code_string)
         eval_func_str = f"{toolbench_api_name}({toolbench_input_params_str})"
         new_func = eval(eval_func_str.encode('unicode_escape').decode())
         response, save_cache, switch_flag = process_error(new_func)
@@ -90,7 +90,7 @@ def run(toolbench_code_string, toolbench_api_name, toolbench_input_params_str):
     except Exception as e:
         response = {"error": f"Function executing {toolbench_code_string} error...\n{e}", "response": ""}
         import traceback; traceback.print_exc()
-        import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
         save_cache = False
     return success_flag, switch_flag, response, save_cache
 

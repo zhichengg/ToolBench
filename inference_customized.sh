@@ -14,4 +14,4 @@ python toolbench/inference/qa_pipeline.py \
     --method CoT@1 \
     --input_query_file test_customized.json \
     --output_answer_file data/answer/test_customized.output5 \
-    --api_customization
+    --api_customization --override

@@ -19,7 +19,8 @@ def parse_args():
     parser.add_argument('--test_ids', type=str, default="", required=True, help='model predictions path')
     parser.add_argument('--evaluator', type=str, default="tooleval_gpt-3.5-turbo_default", required=False, help='which evaluator to use.')
     parser.add_argument('--max_eval_threads', type=int, default=30, required=False, help='max threads nums')
-    parser.add_argument('--evaluate_times', type=int, default=4, required=False, help='how many times to predict with the evaluator for each solution path.')
+    parser.add_argument('--evaluate_times', type=int, default=5, required=False, help='how many times to predict with the evaluator for each solution path.')
+    parser.add_argument('--test_set', type=str, nargs='+', required=True, help='test set name')
     return parser.parse_args()
 
 def write_results(filename: str, reference_model: str, label_cnt: dict) -> None:
@@ -114,7 +115,7 @@ if __name__ == "__main__":
         
     reference_model = args.reference_model
     output_list = []
-    for test_set in test_sets:
+    for test_set in set(test_sets).intersection(set(args.test_set)):
         reference_path = f"{args.converted_answer_path}/{reference_model}/{test_set}.json"
         test_ids = list(json.load(open(os.path.join(args.test_ids, test_set+".json"), "r")).keys())
         reference_examples = json.load(open(reference_path, "r"))
@@ -140,7 +141,7 @@ if __name__ == "__main__":
                         example
                     ))
 
-            for thd in tqdm(as_completed(future),total=len(future),ncols=100):
+            for thd in tqdm(as_completed(future),total=len(future),ncols=100, desc=f"Evaluating {test_set}"):
                 query_id, task_solvable, is_solved, machine_label, reason, not_hallucinate = thd.result()
                 example = reference_examples[query_id]
                 query = example["query"]
@@ -169,14 +170,19 @@ if __name__ == "__main__":
         filename = f"{args.save_path}/{test_set}_{reference_model}.csv"
         write_results(filename, reference_model, label_cnt)
         pass_rate = 0
+        number_of_random = 0
         for query_id in label_cnt:
             if label_cnt[query_id]["failed"] < label_cnt[query_id]["passed"]:
                 pass_rate += 1
             elif label_cnt[query_id]["failed"] == label_cnt[query_id]["passed"]:
+                number_of_random += 1
                 if random.random() < 0.5:
                     pass_rate += 1
         pass_rate /= len(label_cnt)
-        print(f"Test set: {test_set}. Model: {reference_model}. Pass rate: {str(pass_rate)}")
+        print(f"Test set: {test_set}. Model: {reference_model}. Pass rate: {str(pass_rate)} Number of unsure: {number_of_random}")
+        results_filename = f"{args.save_path}/{test_set}_{reference_model}.log"
+        with open(results_filename, 'w') as f:
+            f.write(f"Test set: {test_set}. Model: {reference_model}. Pass rate: {str(pass_rate)} Number of unsure: {number_of_random}\n")
         
 
         

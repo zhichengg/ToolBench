@@ -5,7 +5,6 @@ from termcolor import colored
 import time
 import traceback
 import random
-openai.api_base="https://api.01ww.xyz/v1"
 
 
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(3))
@@ -31,14 +30,16 @@ def chat_completion_request(key, messages, functions=None,function_call=None,key
         json_data.update({"function_call": function_call})
     
     try:
-        if model == "gpt-3.5-turbo-16k":
-            openai.api_key = key
-        else:
-            raise NotImplementedError
+        # if model == "gpt-3.5-turbo-16k":
+        #     openai.api_key = key
+        # else:
+        #     raise NotImplementedError
         # print(json_data)
+        openai.api_key = key
         openai_response = openai.ChatCompletion.create(
             **json_data,
         )
+        print(f"[process({process_id})]openai_response: {openai_response}")
         # print(openai_response)
         json_data = json.loads(str(openai_response))
         return json_data 
@@ -92,11 +93,11 @@ class ChatGPTFunction:
                 time.sleep(15)
             if functions != []:
                 json_data = chat_completion_request(
-                    self.openai_key, conversation_history, functions=functions,process_id=process_id, key_pos=key_pos,**args
+                    self.openai_key, conversation_history, functions=functions,process_id=process_id, key_pos=key_pos, model=self.model, seed=42,**args
                 )
             else:
                 json_data = chat_completion_request(
-                    self.openai_key, conversation_history,process_id=process_id,key_pos=key_pos, **args
+                    self.openai_key, conversation_history,process_id=process_id,key_pos=key_pos, seed=42, model=self.model, **args
                 )
             try:
                 total_tokens = json_data['usage']['total_tokens']
@@ -117,15 +118,15 @@ class ChatGPTFunction:
         return {"role": "assistant", "content": str(json_data)}, -1, 0
 
 if __name__ == "__main__":
-    
-    llm = ChatGPTFunction(openai_key="openchat")
+    openai.api_base="https://api.01ww.xyz/v1"
+    llm = ChatGPTFunction(openai_key="openchat",model="gpt-3.5-turbo-1106")
     prompt = '''下面这句英文可能有语病，能不能把语病都改掉？
 If you think you get the result which can answer the task, call this function to give the final answer. Or, if you think you can't handle the task from this status, call this function to restart. Remember: you should ALWAYS call this function at the end of your try, and the final answer is the ONLY part that will be showed to user, so final answer should contain enough information.
 没语病的形式：
 '''
     messages = [
         {"role":"system","content":""},
-        {"role":"user","content":prompt},
+        {"role":"user","content":"写一个中国的故事，一句话就可以。"},
     ]
     llm.change_messages(messages)
     output,error_code,token_usage = llm.parse(functions=[],process_id=0)

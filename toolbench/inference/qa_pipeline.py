@@ -28,6 +28,8 @@ if __name__ == "__main__":
     parser.add_argument('--use_rapidapi_key', action="store_true", help="To use customized rapidapi service or not.")
     parser.add_argument('--api_customization', action="store_true", help="To use customized api or not.")
     parser.add_argument("--override", action="store_true", help="Override the output file or not.")
+    parser.add_argument('--history_buffer', type=str, default="None", required=False, help='')
+    parser.add_argument('--local_buffer', type=str, default="None", required=False, help='')
     
     args = parser.parse_args()
     if args.override and os.path.exists(args.output_answer_file):

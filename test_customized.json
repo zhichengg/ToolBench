@@ -1,6 +1,6 @@
 [
     {
-        "query": "Calculate 1+1 for me use python.",
+        "query": "Print the current time in GMT+8 for me use python.",
         "query_id": 200001,
         "api_list": [
             {
@@ -9,28 +9,6 @@
                 "api_name": "python_interpreter"
             }
         ]
-    },
-    {
-        "query": "Who are the authors of Time to Leak: Cross-Device Timing Attack On Edge Deep Learning Accelerator?",
-        "query_id": 200002,
-        "api_list": [
-            {
-                "category_name": "ToolQA",
-                "tool_name": "graphtools",
-                "api_name": "check_neighbours"
-            },
-            {
-                "category_name": "ToolQA",
-                "tool_name": "graphtools",
-                "api_name": "check_edges"
-            },
-            {
-                "category_name": "ToolQA",
-                "tool_name": "graphtools",
-                "api_name": "check_nodes"
-            }
-        ]
-
     },
     {
         "query": "What's the answer of the mean of 3,6,9?",
@@ -45,18 +23,6 @@
                 "category_name": "ToolQA",
                 "tool_name": "calculators",
                 "api_name": "wolframalphacalculator"
-            }
-        ]
-
-    },
-    {
-        "query": "What is the corresponding Accuracy score of the PixelGAN_Autoencoders method on MNIST dataset for Unsupervised_image_classification task?",
-        "query_id": 200004,
-        "api_list": [
-            {
-                "category_name": "ToolQA",
-                "tool_name": "retriever",
-                "api_name": "retrieve_scirex"
             }
         ]
 

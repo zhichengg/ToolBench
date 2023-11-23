@@ -7,7 +7,7 @@ from copy import deepcopy
 class single_chain(base_search_method):
     """Implement of CoT method
     """
-    def __init__(self,llm,io_func,extra_prefix="",process_id=0,start_message_list=None):
+    def __init__(self,llm,io_func,extra_prefix="",process_id=0,start_message_list=None, buffer=None, history_buffer="None", local_buffer="None"):
         """extra_prefix and start_message_list is used in Reflection Algo"""
         super(single_chain, self).__init__(llm,io_func, process_id, callbacks=None)
         self.io_func = io_func
@@ -15,6 +15,12 @@ class single_chain(base_search_method):
         self.extra_prefix = extra_prefix
         self.start_message_list = start_message_list
         self.process_id = process_id
+        if buffer != None:
+            self.buffer = buffer
+            self.history_buffer = history_buffer
+            self.local_buffer = local_buffer
+        else:
+            self.buffer = None
 
         self.restart()
     def restart(self):
@@ -101,6 +107,13 @@ class single_chain(base_search_method):
             user = FORMAT_INSTRUCTIONS_USER_FUNCTION
             user = user.replace("{input_description}",self.io_func.input_description)
             self.tree.root.messages.append({"role":"user","content":user})
+            
+            if self.buffer != None:
+                history_prompt = self.buffer.get_history_prompt_using_instruction(instruction=user, k=3, key="query")
+                self.tree.root.messages.append({"role":"system","content":history_prompt})
+                
+                # print("wfff initial messages: \n%s"% str(self.tree.root.messages))
+
         else:
             """In Reflection Algo, we startswith former trials and reflections, so the caller will give the start messages"""
             self.tree.root.messages = self.start_message_list
@@ -174,6 +187,11 @@ class single_chain(base_search_method):
                         new_message["function_call"]["name"] = "invalid_hallucination_function_name"
             
             now_node.messages.append(new_message)
+            if now_node.node_type == "Thought":
+                if self.local_buffer == "thought":
+                    local_system_message = self.buffer.get_history_prompt_using_instruction(instruction=new_message["content"], key="thought")
+                    now_node.messages.append({"role":"system","content":local_system_message})
+                    print("wff got local history: " + local_system_message)
             if now_node.node_type == "Action Input":
                 now_node.messages.append({
                     "role":"function",

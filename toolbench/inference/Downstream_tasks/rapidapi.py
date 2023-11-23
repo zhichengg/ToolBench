@@ -21,6 +21,7 @@ from toolbench.utils import (
 )
 
 from toolbench.inference.Downstream_tasks.base_env import base_env
+from Algorithms.history_buffer import Buffer
 
 
 # For pipeline environment preparation
@@ -61,7 +62,8 @@ class rapidapi_wrapper(base_env):
         self.rapidapi_key = args.rapidapi_key
         self.use_rapidapi_key = args.use_rapidapi_key
         self.api_customization = args.api_customization
-        self.service_url = "http://8.218.239.54:8080/rapidapi"
+        service_url = "http://8.218.239.54:8080/rapidapi"
+        self.service_url = os.getenv("RAPIDAPI_URL", service_url)
         self.max_observation_length = args.max_observation_length
         self.observ_compress_method = args.observ_compress_method
         self.retriever = retriever
@@ -398,6 +400,10 @@ class pipeline_runner:
         self.server = server
         if not self.server: self.task_list = self.generate_task_list()
         else: self.task_list = []
+        if args.history_buffer != "None" or args.local_buffer != "None":
+            self.buffer = Buffer()
+            self.history_buffer = args.history_buffer
+            self.local_buffer = args.local_buffer
 
     def get_backbone_model(self):
         args = self.args
@@ -447,7 +453,9 @@ class pipeline_runner:
     def method_converter(self, backbone_model, openai_key, method, env, process_id, single_chain_max_step=12, max_query_count=60, callbacks=None):
         if callbacks is None: callbacks = []
         if backbone_model == "chatgpt_function":
-            model = "gpt-3.5-turbo-16k-0613"
+            # model = "gpt-3.5-turbo-16k-0613"
+            model = os.environ.get("CHAT_MODEL", "gpt-3.5-turbo-16k-0613")
+            print(f"using OPENAI model {model}")
             llm_forward = ChatGPTFunction(model=model, openai_key=openai_key)
         elif backbone_model == "davinci":
             model = "text-davinci-003"
@@ -458,7 +466,10 @@ class pipeline_runner:
         
         if method.startswith("CoT"):
             passat = int(method.split("@")[-1])
-            chain = single_chain(llm=llm_forward, io_func=env,process_id=process_id)
+            if self.buffer != None:
+                chain = single_chain(llm=llm_forward, io_func=env,process_id=process_id, buffer=self.buffer, history_buffer=self.history_buffer, local_buffer=self.local_buffer)
+            else:
+                chain = single_chain(llm=llm_forward, io_func=env,process_id=process_id)
             result = chain.start(
                                 pass_at=passat,
                                 single_chain_max_step=single_chain_max_step,
@@ -550,5 +561,9 @@ class pipeline_runner:
             retriever = None
         for k, task in enumerate(task_list):
             print(f"process[{self.process_id}] doing task {k}/{len(task_list)}: real_task_id_{task[2]}")
-            result = self.run_single_task(*task, retriever=retriever, process_id=self.process_id)
+            try:
+                result = self.run_single_task(*task, retriever=retriever, process_id=self.process_id)
+            except:
+                import traceback
+                traceback.print_exc()
 
