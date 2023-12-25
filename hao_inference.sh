@@ -123,7 +123,6 @@ export OPENAI_API_BASE="https://api.01ww.xyz/v1"
 # group=$1
 backbone_model=chatgpt_function
 method=CoT@1
-
 ROOT=/ML-A100/Home/csj/gzc/STC
 TB_ROOT=$ROOT/ToolBench
 
@@ -131,7 +130,7 @@ cd $TB_ROOT
 export PYTHONPATH=./
 export NO_PROXY="8.218.239.54"
 
-BUFFER_TYPE=raw
+
 LOCAL_BUFFER=thought
 for group_name in G1_instruction G1_category G1_tool G2_instruction G2_category
 do
@@ -143,8 +142,7 @@ do
     --observ_compress_method truncate \
     --method $method \
     --input_query_file $TB_ROOT/data/test_instruction/$group_name.json \
-    --output_answer_file $ROOT/data/answer/hao/sidecar_${BUFFER_TYPE}_with_local_${LOCAL_BUFFER}/${backbone_model}_${method}_${group_name}_record \
-    --history_buffer ${BUFFER_TYPE} \
+    --output_answer_file $ROOT/data/answer/hao/sidecar_local_${LOCAL_BUFFER}/${backbone_model}_${method}_${group_name}_record \
     --local_buffer ${LOCAL_BUFFER} \
     --toolbench_key $TOOLBENCH_KEY
 done

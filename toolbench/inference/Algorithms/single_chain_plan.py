@@ -7,7 +7,7 @@ from copy import deepcopy
 class single_chain(base_search_method):
     """Implement of CoT method
     """
-    def __init__(self,llm,io_func,extra_prefix="",process_id=0,start_message_list=None, buffer=None, history_buffer=None, local_buffer=None):
+    def __init__(self,llm,io_func,extra_prefix="",process_id=0,start_message_list=None, buffer=None, history_buffer="None", local_buffer="None"):
         """extra_prefix and start_message_list is used in Reflection Algo"""
         super(single_chain, self).__init__(llm,io_func, process_id, callbacks=None)
         self.io_func = io_func
@@ -84,7 +84,7 @@ class single_chain(base_search_method):
             if self.process_id == 0:
                 print(f"[single_chain]try for the {i+1} time")
             self.tree = my_tree()
-            self.tree.root.node_type = "Action Input"
+            self.tree.root.node_type = "Thought"
             self.tree.root.io_state = deepcopy(self.io_func)
             out_node = self.do_chain(self.tree.root, single_chain_max_step)
             self.terminal_node.append(out_node)
@@ -108,10 +108,10 @@ class single_chain(base_search_method):
             user = user.replace("{input_description}",self.io_func.input_description)
             self.tree.root.messages.append({"role":"user","content":user})
             
-            # if self.buffer != None and self.history_buffer != None:
-            #     history_prompt = self.buffer.get_history_prompt_using_instruction(instruction=user, k=3, key="query")
-            #     self.tree.root.messages.append({"role":"system","content":history_prompt})
-                
+            if self.buffer != None:
+                history_prompt = self.buffer.get_history_prompt_using_instruction(instruction=user, k=3, key="query")
+                self.tree.root.messages.append({"role":"system","content":history_prompt})
+            self.tree.root.messages.append({"role":"system","content": "Please first make a plan and then follow the plan to make actions."})
                 # print("wfff initial messages: \n%s"% str(self.tree.root.messages))
 
         else:
@@ -192,20 +192,6 @@ class single_chain(base_search_method):
                     local_system_message = self.buffer.get_history_prompt_using_instruction(instruction=new_message["content"], key="thought")
                     now_node.messages.append({"role":"system","content":local_system_message})
                     print("wff got local history: " + local_system_message)
-
-                    temp_node = tree_node()
-                    temp_node.node_type = "Search"
-                    temp_node.description = local_system_message
-                    child_io_state = deepcopy(now_node.io_state)
-                    
-                    temp_node.io_state = child_io_state
-                    temp_node.is_terminal = child_io_state.check_success() != 0 
-                    temp_node.messages = now_node.messages.copy()
-                    temp_node.father = now_node
-                    now_node.children.append(temp_node)
-                    temp_node.print(self.process_id)
-                    now_node = temp_node
-
             if now_node.node_type == "Action Input":
                 now_node.messages.append({
                     "role":"function",
@@ -218,3 +204,4 @@ class single_chain(base_search_method):
             if now_node.pruned or now_node.is_terminal:
                 return now_node
 
+    

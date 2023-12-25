@@ -12,6 +12,8 @@ from toolbench.inference.LLM.tool_llama_lora_model import ToolLLaMALoRA
 from toolbench.inference.LLM.tool_llama_model import ToolLLaMA
 from toolbench.inference.LLM.retriever import ToolRetriever
 from toolbench.inference.Algorithms.single_chain import single_chain
+from toolbench.inference.Algorithms.single_chain_decompose import single_chain_decompose
+from toolbench.inference.Algorithms.single_chain_plan import single_chain as single_chain_plan
 from toolbench.inference.Algorithms.DFS import DFS_tree_search
 from toolbench.inference.server import get_rapidapi_response
 from toolbench.utils import (
@@ -68,23 +70,30 @@ class rapidapi_wrapper(base_env):
         self.observ_compress_method = args.observ_compress_method
         self.retriever = retriever
         self.process_id = process_id
+        self.tool_descriptions = tool_descriptions
+        self.query_json = query_json
+        self.input_description = self.query_json["query"]
+        self.args = args
 
+        self.refresh_tool_funcs()
+
+
+    def refresh_tool_funcs(self):
         self.tool_names = []
         self.cate_names = []
 
-        self.input_description = query_json["query"]
+        
         self.functions = []
         self.api_name_reflect = {}
-
         if self.retriever is not None:
-            query_json = self.retrieve_rapidapi_tools(self.input_description, args.retrieved_api_nums, args.tool_root_dir)
-            data_dict = self.fetch_api_json(query_json)
-            tool_descriptions = self.build_tool_description(data_dict)
+            self.query_json = self.retrieve_rapidapi_tools(self.input_description, self.args.retrieved_api_nums, self.args.tool_root_dir)
+            data_dict = self.fetch_api_json(self.query_json)
+            self.tool_descriptions = self.build_tool_description(data_dict)
         else:
-            data_dict = self.fetch_api_json(query_json)
+            data_dict = self.fetch_api_json(self.query_json)
 
         for k,api_json in enumerate(data_dict["api_list"]):
-            standard_tool_name = tool_descriptions[k][0]
+            standard_tool_name = self.tool_descriptions[k][0]
             openai_function_json,cate_name, pure_api_name = self.api_json_to_openai_json(api_json,standard_tool_name)
             self.functions.append(openai_function_json)
 
@@ -119,7 +128,7 @@ class rapidapi_wrapper(base_env):
 You have access of the following tools:\n'''
         
         unduplicated_reflection = {}
-        for standardize_tool_name, tool_des in tool_descriptions:
+        for standardize_tool_name, tool_des in self.tool_descriptions:
             unduplicated_reflection[standardize_tool_name] = tool_des
 
         for k,(standardize_tool_name, tool_des) in enumerate(unduplicated_reflection.items()):
@@ -450,7 +459,7 @@ class pipeline_runner:
             task_list.append((method, backbone_model, query_id, data_dict, args, answer_dir, tool_des))
         return task_list
     
-    def method_converter(self, backbone_model, openai_key, method, env, process_id, single_chain_max_step=12, max_query_count=60, callbacks=None):
+    def method_converter(self, backbone_model, openai_key, method, env, process_id, single_chain_max_step=48, max_query_count=60, callbacks=None):
         if callbacks is None: callbacks = []
         if backbone_model == "chatgpt_function":
             # model = "gpt-3.5-turbo-16k-0613"
@@ -466,10 +475,30 @@ class pipeline_runner:
         
         if method.startswith("CoT"):
             passat = int(method.split("@")[-1])
-            if self.buffer != None:
+            if hasattr(self, "buffer") and  self.buffer != None:
                 chain = single_chain(llm=llm_forward, io_func=env,process_id=process_id, buffer=self.buffer, history_buffer=self.history_buffer, local_buffer=self.local_buffer)
             else:
                 chain = single_chain(llm=llm_forward, io_func=env,process_id=process_id)
+            result = chain.start(
+                                pass_at=passat,
+                                single_chain_max_step=single_chain_max_step,
+                                answer=1)
+        elif method.startswith("Decompose"):
+            passat = int(method.split("@")[-1])
+            if hasattr(self, "buffer") and  self.buffer != None:
+                chain = single_chain_decompose(llm=llm_forward, io_func=env,process_id=process_id, buffer=self.buffer, history_buffer=self.history_buffer, local_buffer=self.local_buffer)
+            else:
+                chain = single_chain_decompose(llm=llm_forward, io_func=env,process_id=process_id)
+            result = chain.start(
+                                pass_at=passat,
+                                single_chain_max_step=single_chain_max_step,
+                                answer=1)
+        elif method.startswith("Plan"):
+            passat = int(method.split("@")[-1])
+            if hasattr(self, "buffer") and  self.buffer != None:
+                chain = single_chain_plan(llm=llm_forward, io_func=env,process_id=process_id, buffer=self.buffer, history_buffer=self.history_buffer, local_buffer=self.local_buffer)
+            else:
+                chain = single_chain_plan(llm=llm_forward, io_func=env,process_id=process_id)
             result = chain.start(
                                 pass_at=passat,
                                 single_chain_max_step=single_chain_max_step,
@@ -524,7 +553,7 @@ class pipeline_runner:
             method=method,
             env=env,
             process_id=process_id,
-            single_chain_max_step=12,
+            single_chain_max_step=48,
             max_query_count=200,
             callbacks=callbacks
         )
@@ -542,7 +571,7 @@ class pipeline_runner:
         return result
         
     def run(self):
-        task_list = self.task_list
+        task_list = self.task_list[:self.args.first_n]
         random.seed(42)
         random.shuffle(task_list)
         print(f"total tasks: {len(task_list)}")
@@ -561,6 +590,65 @@ class pipeline_runner:
             retriever = None
         for k, task in enumerate(task_list):
             print(f"process[{self.process_id}] doing task {k}/{len(task_list)}: real_task_id_{task[2]}")
+            # @todo
+            method = task[0]
+#             if method.startswith("Decompose"):
+#                 data_dict = task[3]
+#                 args = task[4]
+#                 query = data_dict['query']
+
+#                 backbone_model = task[1]
+#                 if backbone_model == "chatgpt_function":
+#                     # model = "gpt-3.5-turbo-16k-0613"
+#                     model = os.environ.get("CHAT_MODEL", "gpt-3.5-turbo-16k-0613")
+#                     print(f"using OPENAI model {model}")
+#                     llm_forward = ChatGPTFunction(model=model, openai_key=args.openai_key)
+#                 elif backbone_model == "davinci":
+#                     model = "text-davinci-003"
+#                     llm_forward = Davinci(model=model, openai_key=args.openai_key)
+#                 else:
+#                     model = backbone_model
+#                     llm_forward = model
+
+#                 # system = "Please directly paraphrase the following query into subqueries and try to keep changes to the original sentence minimal. Please ensure that each subquery is complete to handle independly."
+#                 system = r"Please break down the following instruction into simpler, standalone instruction while preserving the original meaning. Please also make the subtasks divided executable on its own, i.e. keep all necessary information in all subtasks. The granularity doesn't need to be too fine. Please also include the context information that are needed to complete each subtask but are shared across all subtasks.  Return the outcome in a json file in the following format: {\"context\": ..., \"subtasks\": [...]}. "
+#                 user = "The instruction is {}.".format(query)
+#                 print(query)
+#                 print('------------------------------')
+#                 messages = [
+#                     {"role":"system","content": system},
+#                     {"role":"user","content": user},
+#                 ]
+#                 llm_forward.change_messages(messages)
+#                 output,error_code,token_usage = llm_forward.parse(functions=[],process_id=0, response_format={ "type": "json_object" })
+#                 # print(output)
+#                 # import pdb; pdb.set_trace()
+#                 task_decompose = json.loads(output["content"])
+
+#                 # subquerys = output["content"].split('\n')
+#                 context = task_decompose["context"]
+#                 subquerys = task_decompose["subtasks"]
+#                 # subquerys = ["Please give me the statistics of the wheel results for the past 3 hours including count, percentage, last occurrence, and hot frequency percentage.", "Provide the latest spin data.", "Give me the history of the last 20 spins."]
+#                 print(subquerys)
+#                 results = []
+#                 for i, subquery in enumerate(subquerys):
+#                     # print(task)
+                    
+#                     task_format = """\
+# Given the task context 
+# {context} 
+# Now please complete the following task: 
+# {subquery}
+# """
+#                     # print(f'---------------Now doing task: {task_format}')
+#                     task_desc = task_format.format(context=context, subquery=subquery)
+#                     task[3]['query'] = task_desc
+#                     result = self.run_single_task(*task, retriever=retriever, process_id=self.process_id)
+#                     print("---------------The result is {}".format(result))
+#                     results.append(result)
+#                 print(results)
+#                 exit()   
+#             else:
             try:
                 result = self.run_single_task(*task, retriever=retriever, process_id=self.process_id)
             except:

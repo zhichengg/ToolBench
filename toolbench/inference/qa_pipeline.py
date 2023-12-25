@@ -30,7 +30,8 @@ if __name__ == "__main__":
     parser.add_argument("--override", action="store_true", help="Override the output file or not.")
     parser.add_argument('--history_buffer', type=str, default="None", required=False, help='')
     parser.add_argument('--local_buffer', type=str, default="None", required=False, help='')
-    
+    parser.add_argument('--first_n', type=int, default=-1, required=False,)
+
     args = parser.parse_args()
     if args.override and os.path.exists(args.output_answer_file):
         import shutil

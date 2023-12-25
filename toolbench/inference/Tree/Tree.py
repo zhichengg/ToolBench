@@ -88,7 +88,7 @@ class tree_node:
     def print(self,process_id = 0):
         if process_id != 0:
             return
-        color_converter = {"Thought":"red", "Action": "blue", "Action Input": "cyan","Final Answer": "green","Reflection":"blue"}
+        color_converter = {"Thought":"red", "Action": "blue", "Action Input": "cyan","Final Answer": "green","Reflection":"blue", "Search":"yellow", "Decompose":"magenta"}
         print(colored(f"{self.node_type}: {self.description}",color = color_converter[self.node_type]))
         if self.observation != "":
             if len(self.observation) < 1536:
@@ -163,7 +163,9 @@ class tree_node:
                 while use_messages[-1]["role"] == "user":
                     use_messages = use_messages[:-1]
                 use_messages = sift_first_invalid_message(use_messages)
-                if use_messages[-1]["role"] == "assistant":
+                # if use_messages[-1]["role"] == "assistant":
+                #     result = [use_messages] + result
+                if use_messages[-1]["role"] == "system" and use_messages[-2]["role"] == "assistant":
                     result = [use_messages] + result
             now_node = now_node.father
         return result
@@ -177,6 +179,7 @@ class tree_node:
         while now_node.father != None:
             result = [now_node.to_json(use_messages=use_messages)] + result
             now_node = now_node.father
+        result = [now_node.to_json(use_messages=use_messages)] + result
         return result
 
     def get_former_trice_from_this_node(self,valid_types=["Thought","Action","Action Input","Observation"],end_node = None):

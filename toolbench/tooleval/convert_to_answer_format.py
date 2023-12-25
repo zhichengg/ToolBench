@@ -71,13 +71,16 @@ def process_valid_data(method,answer_generation):
             'answer_details': eg.convert_to_dict()
         }
     }
+
+
 def process_invalid_data(method,data_dict):
     answer_generation = data_dict['answer_generation']
     functions = answer_generation['function']
     query = answer_generation['query']
     eg = ExecutionGraph()
+    import pdb; pdb.set_trace()
     last_node = generate_init_message_node(eg,functions,query)
-    if 'CoT' in method or 'cot' in method:
+    if 'CoT' in method or 'cot' in method or 'Plan' in method or "decompose" in method.lower():
         trail = random.choice(data_dict["trys"])
 
         
@@ -94,6 +97,9 @@ def process_invalid_data(method,data_dict):
             elif message['node_type'] == 'Thought':
                 node = ExecutionNode(role='assistant',
                                         message=message['description'])
+            elif message['node_type'] == 'Search':
+                index = index + 1
+                continue
             else:
                 raise NotImplementedError(f"Unknown node_type: {message['node_type']}")
             index = index + 1
@@ -180,6 +186,7 @@ if __name__=='__main__':
     method = args.method
     output = args.output
     answer_dict = {}
+    print(os.listdir(answer_dir))
     for filename in os.listdir(answer_dir):
         if filename.endswith('.json') and method in filename:
             qid = filename.split('_')[0]

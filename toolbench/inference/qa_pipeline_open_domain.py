@@ -28,6 +28,10 @@ if __name__ == "__main__":
     parser.add_argument('--rapidapi_key', type=str, default="",required=False, help='your rapidapi key to request rapidapi service')
     parser.add_argument('--use_rapidapi_key', action="store_true", help="To use customized rapidapi service or not.")
     parser.add_argument('--api_customization', action="store_true", help="To use customized api or not. NOT SUPPORTED currently under open domain setting.")
+    parser.add_argument("--override", action="store_true", help="Override the output file or not.")
+    parser.add_argument('--history_buffer', type=str, default="None", required=False, help='')
+    parser.add_argument('--local_buffer', type=str, default="None", required=False, help='')
+    parser.add_argument('--first_n', type=int, default=-1, required=False,)
     
     args = parser.parse_args()
 
