@@ -1,14 +1,16 @@
 import json
 import openai
+from openai import OpenAI
+
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 from termcolor import colored
 import time
 import traceback
 import random
 
-
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(3))
 def chat_completion_request(key, messages, functions=None,function_call=None,key_pos=None, model="gpt-3.5-turbo-16k",stop=None,process_id=0, **args):
+    client = OpenAI(api_key=key, base_url="https://api.01ww.xyz/v1")
     use_messages = []
     for message in messages:
         if not("valid" in message.keys() and message["valid"] == False):
@@ -44,15 +46,13 @@ def chat_completion_request(key, messages, functions=None,function_call=None,key
         #     openai.api_key = key
         # else:
         #     raise NotImplementedError
-        openai.api_key = key
         # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         # print(json.dumps(json_data))
-        openai_response = openai.ChatCompletion.create(
-            **json_data,
-        )
+        openai_response = client.chat.completions.create(**json_data)
         # print(f"[process({process_id})]openai_response: {openai_response}")
         # print(openai_response)
-        json_data = json.loads(str(openai_response))
+        # json_data = json.loads(str(openai_response))
+        json_data = openai_response.dict()
         return json_data 
     except KeyboardInterrupt:
         # raise KeyboardInterrupt
@@ -118,7 +118,8 @@ class ChatGPTFunction:
                 if process_id == 0:
                     print(f"[process({process_id})]total tokens: {json_data['usage']['total_tokens']}")
 
-                if "function_call" in message.keys() and "." in message["function_call"]["name"]:
+                if message['function_call'] and "." in message["function_call"]["name"]:
+                # if "function_call" in message.keys() and "." in message["function_call"]["name"]:
                     message["function_call"]["name"] = message["function_call"]["name"].split(".")[-1]
 
                 return message, 0, total_tokens
@@ -133,14 +134,16 @@ class ChatGPTFunction:
         return {"role": "assistant", "content": str(json_data)}, -1, 0
 
 if __name__ == "__main__":
-    openai.api_base="https://openai-lcih.onrender.com/v1"
+    # TODO: The 'openai.api_base' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(api_base="https://openai-lcih.onrender.com/v1")'
+    # openai.api_base="https://openai-lcih.onrender.com/v1"
+
     llm = ChatGPTFunction(openai_key="openchat",model="gpt-3.5-turbo-1106")
     prompt = '''下面这句英文可能有语病，能不能把语病都改掉？
 If you think you get the result which can answer the task, call this function to give the final answer. Or, if you think you can't handle the task from this status, call this function to restart. Remember: you should ALWAYS call this function at the end of your try, and the final answer is the ONLY part that will be showed to user, so final answer should contain enough information.
 没语病的形式：
 '''
     messages = [
-        {"role":"system","content":""},
+        # {"role":"system","content":""},
         {"role":"user","content":"写一个中国的故事，一句话就可以。"},
     ]
     llm.change_messages(messages)

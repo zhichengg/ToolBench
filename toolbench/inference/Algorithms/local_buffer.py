@@ -8,6 +8,9 @@ import numpy as np
 import atexit
 import time
 import openai
+from openai import OpenAI
+
+client = OpenAI(api_key="openchat")
 from tqdm import tqdm
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
@@ -54,10 +57,11 @@ class Buffer:
         self.save()
 
     def _ada_embedding_request(self, input, model="text-embedding-ada-002"):
-        openai.api_base="https://api.01ww.xyz/v1"
-        openai.api_key="openchat"
+        # TODO: The 'openai.api_base' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(api_base="https://api.01ww.xyz/v1")'
+        # openai.api_base="https://api.01ww.xyz/v1"
         input = input.replace("\n", " ")
-        return openai.Embedding.create(input = [input], model=model)['data'][0]['embedding']
+        response = client.embeddings.create(input = [input], model=model)
+        return response.data[0].embedding
 
 
 

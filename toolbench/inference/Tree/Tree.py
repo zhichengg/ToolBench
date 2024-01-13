@@ -154,8 +154,11 @@ class tree_node:
         while now_node.father != None:
             if now_node.node_type == "Action Input":
                 use_messages = deepcopy(now_node.messages)
-                while use_messages[-1]["role"] != "assistant":
-                    use_messages = use_messages[:-1]
+                try:
+                    while use_messages[-1]["role"] != "assistant":
+                        use_messages = use_messages[:-1]
+                except:
+                    import pdb; pdb.set_trace()
                 use_messages = sift_first_invalid_message(use_messages)
                 result = [use_messages] + result
             elif now_node.node_type == "Thought":
@@ -179,7 +182,9 @@ class tree_node:
         while now_node.father != None:
             result = [now_node.to_json(use_messages=use_messages)] + result
             now_node = now_node.father
-        result = [now_node.to_json(use_messages=use_messages)] + result
+        # if now.node_type == "Decompose":
+        #     result = [now_node.to_json(use_messages=use_messages)] + result
+        # result = [now_node.to_json(use_messages=use_messages)] + result
         return result
 
     def get_former_trice_from_this_node(self,valid_types=["Thought","Action","Action Input","Observation"],end_node = None):

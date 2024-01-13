@@ -31,6 +31,6 @@ def text(to: str, text: str, toolbench_rapidapi_key: str='088440d910mshef857391f
 if __name__ == "__main__":
     inp_text = "Hello, how are you today?"
     to = 'en'
-    toolbench_rapidapi_key = "5b91ea4ff0msh05dd104cd687ca9p1bf143jsne32b1273bd84"
+    toolbench_rapidapi_key = "xud2dQdMNE8MRlkwBTe5DYB0DkktPi1uiCnyteptzmg3gS7Bbz"
     observation = text(to, inp_text)
     print(observation)

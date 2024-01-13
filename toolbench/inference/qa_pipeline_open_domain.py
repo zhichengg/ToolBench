@@ -3,7 +3,7 @@ Open-domain QA Pipeline
 '''
 import argparse
 from toolbench.inference.Downstream_tasks.rapidapi import pipeline_runner
-
+import os, shutil
 
 if __name__ == "__main__":
 
@@ -34,6 +34,8 @@ if __name__ == "__main__":
     parser.add_argument('--first_n', type=int, default=-1, required=False,)
     
     args = parser.parse_args()
-
+    if args.override and os.path.exists(args.output_answer_file):
+        import shutil
+        shutil.rmtree(args.output_answer_file)
     pipeline_runner = pipeline_runner(args, add_retrieval=True)
     pipeline_runner.run()

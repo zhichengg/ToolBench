@@ -107,13 +107,6 @@ class single_chain(base_search_method):
             user = FORMAT_INSTRUCTIONS_USER_FUNCTION
             user = user.replace("{input_description}",self.io_func.input_description)
             self.tree.root.messages.append({"role":"user","content":user})
-            
-            # if self.buffer != None and self.history_buffer != None:
-            #     history_prompt = self.buffer.get_history_prompt_using_instruction(instruction=user, k=3, key="query")
-            #     self.tree.root.messages.append({"role":"system","content":history_prompt})
-                
-                # print("wfff initial messages: \n%s"% str(self.tree.root.messages))
-
         else:
             """In Reflection Algo, we startswith former trials and reflections, so the caller will give the start messages"""
             self.tree.root.messages = self.start_message_list
@@ -144,7 +137,7 @@ class single_chain(base_search_method):
                     now_node.observation_code = error_code
                     now_node.pruned = True
 
-            if "function_call" in new_message.keys():
+            if "function_call" in new_message.keys() and new_message['function_call'] is not None:
                 function_name = new_message["function_call"]["name"]
                 temp_node = tree_node()
                 temp_node.node_type = "Action"

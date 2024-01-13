@@ -39,7 +39,7 @@ def process_valid_data(method,answer_generation):
             index = index + 1
             continue
         elif role == 'assistant':
-            if 'function_call' in message :
+            if 'function_call' in message and message['function_call'] is not None:
                 node = ExecutionNode(role='tool', message={
                     'name':message['function_call']['name'],
                     'arguments':message['function_call']['arguments'],
@@ -78,7 +78,6 @@ def process_invalid_data(method,data_dict):
     functions = answer_generation['function']
     query = answer_generation['query']
     eg = ExecutionGraph()
-    import pdb; pdb.set_trace()
     last_node = generate_init_message_node(eg,functions,query)
     if 'CoT' in method or 'cot' in method or 'Plan' in method or "decompose" in method.lower():
         trail = random.choice(data_dict["trys"])
@@ -94,13 +93,19 @@ def process_invalid_data(method,data_dict):
                     'response':(trail['chain'][index+1]['observation'])})
             
                 index = index + 1
+            elif message['node_type'] == 'Final Answer':
+                node = ExecutionNode(role='tool', message={
+                    'name':'Finish',
+                    'arguments':None,
+                    'response':message['description']})
             elif message['node_type'] == 'Thought':
                 node = ExecutionNode(role='assistant',
                                         message=message['description'])
-            elif message['node_type'] == 'Search':
+            elif message['node_type'] == 'Search' or message['node_type'] == 'Decompose':
                 index = index + 1
                 continue
             else:
+                print(message['node_type'])
                 raise NotImplementedError(f"Unknown node_type: {message['node_type']}")
             index = index + 1
 
@@ -190,7 +195,10 @@ if __name__=='__main__':
     for filename in os.listdir(answer_dir):
         if filename.endswith('.json') and method in filename:
             qid = filename.split('_')[0]
-            data_dict = json.load(open(os.path.join(answer_dir,filename)))
+            try:
+                data_dict = json.load(open(os.path.join(answer_dir,filename)))
+            except:
+                continue
             if not data_dict['answer_generation']['valid_data']:
                 answer_dict[qid] = process_invalid_data(method,data_dict)
             else:

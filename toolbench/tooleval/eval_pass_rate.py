@@ -21,6 +21,7 @@ def parse_args():
     parser.add_argument('--max_eval_threads', type=int, default=30, required=False, help='max threads nums')
     parser.add_argument('--evaluate_times', type=int, default=5, required=False, help='how many times to predict with the evaluator for each solution path.')
     parser.add_argument('--test_set', type=str, nargs='+', required=True, help='test set name')
+    parser.add_argument('--overwrite', action='store_true', help='overwrite the existed results')
     return parser.parse_args()
 
 def write_results(filename: str, reference_model: str, label_cnt: dict) -> None:
@@ -119,7 +120,7 @@ if __name__ == "__main__":
         reference_path = f"{args.converted_answer_path}/{reference_model}/{test_set}.json"
         test_ids = list(json.load(open(os.path.join(args.test_ids, test_set+".json"), "r")).keys())
         reference_examples = json.load(open(reference_path, "r"))
-        if os.path.exists(f"{args.save_path}/{test_set}_{reference_model}.json"):
+        if os.path.exists(f"{args.save_path}/{test_set}_{reference_model}.json") and not args.overwrite:
             existed_ids = list(json.load(open(f"{args.save_path}/{test_set}_{reference_model}.json", "r")).keys())
             label_cnt = json.load(open(f"{args.save_path}/{test_set}_{reference_model}.json", "r"))
         else:

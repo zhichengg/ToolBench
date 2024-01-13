@@ -5,8 +5,19 @@ from Algorithms.base_search import base_search_method
 from copy import deepcopy
 import backoff, json
 
-DECOMPOSE_SYSTEM_PROMPT = r"Please break down the following instruction into simpler, standalone instruction while preserving the original meaning. Please also make the subtasks divided executable on its own, i.e. keep all necessary information in all subtasks. The granularity doesn't need to be too fine. Please also include the context information that are needed to complete each subtask but are shared across all subtasks.  Return the outcome in a json file in the following format: {\"context\": ..., \"subtasks\": [subtask1, subtask2, ...]}. "
-DECOMPOSE_USER_PROMPT = "The instruction is {query}"
+DECOMPOSE_SYSTEM_PROMPT = r"Please break down the following instructions into simpler, standalone instructions while preserving the original meaning. Please also make the subtasks divided executable on its own, i.e. keep all necessary information in all subtasks. The granularity doesn't need to be too fine. Please also include the context information that is needed to complete each subtask but is shared across all subtasks.  Return the outcome in a JSON file in the following format: {\"context\": ..., \"subtasks\": [subtask1, subtask2, ...]}.Ensure all subtasks to be pure text."
+DECOMPOSE_FEWSHOT = [
+    {"role": "user", "content": "Query: \nI'm organizing a company event and I need to track the delivery of event materials. Can you help me track the package with the tracking number PQR678? Also, provide me with the latest status and location updates. Additionally, find the address details for the event venue using the zip code 43210."},
+{"role": "assistant", "content": json.dumps({
+  "context": "Organizing a company event requires tracking the delivery of event materials and obtaining venue address details.",
+  "subtasks": [
+    "Use the tracking number PQR678 to check the delivery status of the event materials package.",
+    "Obtain the latest location updates for the package with tracking number PQR678.",
+    "Find the address details for the event venue located in the area with the zip code 43210."
+  ]
+})}
+]
+DECOMPOSE_USER_PROMPT = "Query: {query}"
 TASK_FORMAT_PROMPT = """\
 Given the task context 
 {context} 
@@ -114,7 +125,7 @@ Subtasks are: {subquerys}"""
             previous_node = self.tree.root
             for subquery in subquerys:
                 temp_node = tree_node()
-                temp_node.node_type = "Action Input"
+                temp_node.node_type = "Decompose"
                 temp_node.io_state = deepcopy(self.io_func)
                 temp_node.io_state.input_description = TASK_FORMAT_PROMPT.format(context=context, subquery=subquery)
                 temp_node.messages = previous_node.messages.copy()
@@ -135,33 +146,59 @@ Subtasks are: {subquerys}"""
                 sucess_state = out_node.io_state.check_success()
                 results.append(sucess_state)
                 previous_node = out_node
+
+        
             terminal_node = tree_node()
             terminal_node.father = previous_node
             previous_node.children.append(terminal_node)
-            terminal_node.node_type = "Final Answer"
-            terminal_node.is_terminal = True
+            terminal_node.node_type = "Action"
+            terminal_node.description = 'Finish'
+            
+
+            final_node = tree_node()
+            final_node.node_type = "Action Input"
+            final_node.father = terminal_node
+            terminal_node.children.append(final_node)
+            
             final_message = FINAL_ANSWER_PROMPT.format(context=context, subquery=subquerys, answer=[node.description for node in outnodes])
             final_message = {"role":"user","content":final_message}
             self.llm.change_messages([final_message])
             outputs, _, _ = self.llm.parse(functions=[],process_id=0)
             terminal_node.messages = previous_node.messages.copy()
             terminal_node.messages.extend([final_message, outputs])
-            terminal_node.description = outputs["content"]
+            # terminal_node.detailed_description = outputs["content"]
             terminal_node.print(self.process_id)
             terminal_node.pruned = False
             for node in outnodes:
                 if node.pruned:
                     terminal_node.pruned = True
                     break
-            self.terminal_node.append(terminal_node)
-            self.try_list.append(self.to_json_single())
+
+            final_node.pruned = terminal_node.pruned
+            final_node.messages = terminal_node.messages.copy()
+
+
+            # self.terminal_node.append(terminal_node)
+            # self.try_list.append(self.to_json_single())
 
 
             if all(results):
                 self.status = 1
                 self.success_count += 1
+                final_node.observation = "{\"response\":\"successfully giving the final answer.\"}"
+                final_node.description = json.dumps({
+                    'return_type' : 'give_answer',
+                    'final_answer': terminal_node.description,
+                })
+                self.terminal_node.append(final_node)
+                self.try_list.append(self.to_json_single())
                 if self.success_count >= answer:
                     return 1
+            else:
+                final_node.observation = "{\"response\":\"chose to give up and restart\"}"
+                final_node.description = "{\n  \"return_type\": \"give_up_and_restart\"\n}"
+                self.terminal_node.append(final_node)
+                self.try_list.append(self.to_json_single())
         return sum(results) / len(results)
 
     @backoff.on_exception(backoff.expo, Exception, max_tries=3)
@@ -169,6 +206,7 @@ Subtasks are: {subquerys}"""
         start_task = self.io_func.input_description
         messages = [
                     {"role":"system","content": DECOMPOSE_SYSTEM_PROMPT},
+                    *DECOMPOSE_FEWSHOT,
                     {"role":"user","content": DECOMPOSE_USER_PROMPT.format(query=start_task)},
                 ]
         self.llm.change_messages(messages)
@@ -192,7 +230,7 @@ Subtasks are: {subquerys}"""
             now_node.messages.append({"role":"user","content":user})
             
             if self.buffer != None and hasattr(self, "history_buffer"):
-                history_prompt = self.buffer.get_history_prompt_using_instruction(instruction=user, k=3, key="query")
+                history_prompt = self.buffer.get_history_prompt_using_instruction(instruction=user, k=2, key="query")
                 now_node.messages.append({"role":"system","content":history_prompt})
             
                 # print("wfff initial messages: \n%s"% str(self.tree.root.messages))
@@ -227,7 +265,7 @@ Subtasks are: {subquerys}"""
                     now_node.observation_code = error_code
                     now_node.pruned = True
 
-            if "function_call" in new_message.keys():
+            if "function_call" in new_message.keys() and new_message['function_call'] is not None:
                 function_name = new_message["function_call"]["name"]
                 temp_node = tree_node()
                 temp_node.node_type = "Action"
@@ -272,7 +310,7 @@ Subtasks are: {subquerys}"""
             now_node.messages.append(new_message)
             if now_node.node_type == "Thought":
                 if hasattr(self, "local_buffer") and self.local_buffer == "thought":
-                    local_system_message = self.buffer.get_history_prompt_using_instruction(instruction=new_message["content"], key="thought")
+                    local_system_message = self.buffer.get_history_prompt_using_instruction(instruction=new_message["content"], key="thought", k=1)
                     now_node.messages.append({"role":"system","content":local_system_message})
                     print("wff got local history: " + local_system_message)
             if now_node.node_type == "Action Input":

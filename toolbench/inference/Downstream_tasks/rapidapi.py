@@ -358,7 +358,13 @@ You have access of the following tools:\n'''
                         response = get_rapidapi_response(payload, api_customization=self.api_customization, tools_root=self.tool_root_dir.replace("/", "."))
                     else:
                         time.sleep(2) # rate limit: 30 per minute
-                        headers = {"toolbench_key": self.toolbench_key}
+                        if self.service_url.endswith('rapidapi'):
+                            headers = {"toolbench_key": self.toolbench_key}
+                        else:
+                            headers = {
+                                'accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            }
                         response = requests.post(self.service_url, json=payload, headers=headers, timeout=15)
                         if response.status_code != 200:
                             print(response)
@@ -379,6 +385,7 @@ You have access of the following tools:\n'''
                     # 10 stands for rate limit
                     # 11 message contains "error" field
                     # 12 error sending request
+                    # import pdb; pdb.set_trace()
                     if response["error"] == "API not working error...":
                         status_code = 6
                     elif response["error"] == "Unauthorized error...":
@@ -571,7 +578,10 @@ class pipeline_runner:
         return result
         
     def run(self):
-        task_list = self.task_list[:self.args.first_n]
+        if self.args.first_n < 0:
+            task_list = self.task_list
+        else:
+            task_list = self.task_list[:self.args.first_n]
         random.seed(42)
         random.shuffle(task_list)
         print(f"total tasks: {len(task_list)}")
@@ -651,6 +661,9 @@ class pipeline_runner:
 #             else:
             try:
                 result = self.run_single_task(*task, retriever=retriever, process_id=self.process_id)
+            except KeyboardInterrupt:
+                print("KeyboardInterrupt")
+                exit()
             except:
                 import traceback
                 traceback.print_exc()
