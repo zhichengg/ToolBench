@@ -1,29 +1,16 @@
 import json
 import openai
-from openai import OpenAI
-
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 from termcolor import colored
 import time
-import traceback
 import random
 
+
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(3))
-def chat_completion_request(key, messages, functions=None,function_call=None,key_pos=None, model="gpt-3.5-turbo-16k",stop=None,process_id=0, **args):
-    client = OpenAI(api_key=key, base_url="https://api.01ww.xyz/v1")
+def chat_completion_request(key, messages, functions=None,function_call=None,key_pos=None, model="gpt-3.5-turbo-16k-0613",stop=None,process_id=0, **args):
     use_messages = []
     for message in messages:
         if not("valid" in message.keys() and message["valid"] == False):
-            if "function_call" in message:
-                message["content"] = "null"
-            #     message["tool_calls"] = []
-            #     tool_call = {
-            #         "id": "null",
-            #         "type": "function",
-            #         "function": message["function_call"],
-            #     }
-            #     del message["function_call"]
-            #     message["tool_calls"].append(tool_call)
             use_messages.append(message)
 
     json_data = {
@@ -42,29 +29,23 @@ def chat_completion_request(key, messages, functions=None,function_call=None,key
         json_data.update({"function_call": function_call})
     
     try:
-        # if model == "gpt-3.5-turbo-16k":
-        #     openai.api_key = key
-        # else:
-        #     raise NotImplementedError
-        # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-        # print(json.dumps(json_data))
-        openai_response = client.chat.completions.create(**json_data)
-        # print(f"[process({process_id})]openai_response: {openai_response}")
-        # print(openai_response)
-        # json_data = json.loads(str(openai_response))
-        json_data = openai_response.dict()
+        if model == "gpt-3.5-turbo-16k-0613":
+            openai.api_key = key
+        else:
+            raise NotImplementedError
+        openai_response = openai.ChatCompletion.create(
+            **json_data,
+        )
+        json_data = json.loads(str(openai_response))
         return json_data 
-    except KeyboardInterrupt:
-        # raise KeyboardInterrupt
-        exit()
+
     except Exception as e:
         print("Unable to generate ChatCompletion response")
         print(f"OpenAI calling Exception: {e}")
-        traceback.print_exc()
         return e
 
 class ChatGPTFunction:
-    def __init__(self, model="gpt-3.5-turbo-16k", openai_key=""):
+    def __init__(self, model="gpt-3.5-turbo-16k-0613", openai_key=""):
         self.model = model
         self.conversation_history = []
         self.openai_key = openai_key
@@ -106,11 +87,11 @@ class ChatGPTFunction:
                 time.sleep(15)
             if functions != []:
                 json_data = chat_completion_request(
-                    self.openai_key, conversation_history, functions=functions,process_id=process_id, key_pos=key_pos, model=self.model, **args
+                    self.openai_key, conversation_history, functions=functions,process_id=process_id, key_pos=key_pos,**args
                 )
             else:
                 json_data = chat_completion_request(
-                    self.openai_key, conversation_history,process_id=process_id,key_pos=key_pos, seed=42, model=self.model, **args
+                    self.openai_key, conversation_history,process_id=process_id,key_pos=key_pos, **args
                 )
             try:
                 total_tokens = json_data['usage']['total_tokens']
@@ -118,13 +99,10 @@ class ChatGPTFunction:
                 if process_id == 0:
                     print(f"[process({process_id})]total tokens: {json_data['usage']['total_tokens']}")
 
-                if message['function_call'] and "." in message["function_call"]["name"]:
-                # if "function_call" in message.keys() and "." in message["function_call"]["name"]:
+                if "function_call" in message.keys() and "." in message["function_call"]["name"]:
                     message["function_call"]["name"] = message["function_call"]["name"].split(".")[-1]
 
                 return message, 0, total_tokens
-            except KeyboardInterrupt:
-                exit()
             except BaseException as e:
                 print(f"[process({process_id})]Parsing Exception: {repr(e)}. Try again.")
                 if json_data is not None:
@@ -134,17 +112,14 @@ class ChatGPTFunction:
         return {"role": "assistant", "content": str(json_data)}, -1, 0
 
 if __name__ == "__main__":
-    # TODO: The 'openai.api_base' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(api_base="https://openai-lcih.onrender.com/v1")'
-    # openai.api_base="https://openai-lcih.onrender.com/v1"
-
-    llm = ChatGPTFunction(openai_key="openchat",model="gpt-3.5-turbo-1106")
+    llm = ChatGPTFunction()
     prompt = '''下面这句英文可能有语病，能不能把语病都改掉？
 If you think you get the result which can answer the task, call this function to give the final answer. Or, if you think you can't handle the task from this status, call this function to restart. Remember: you should ALWAYS call this function at the end of your try, and the final answer is the ONLY part that will be showed to user, so final answer should contain enough information.
 没语病的形式：
 '''
     messages = [
-        # {"role":"system","content":""},
-        {"role":"user","content":"写一个中国的故事，一句话就可以。"},
+        {"role":"system","content":""},
+        {"role":"user","content":prompt},
     ]
     llm.change_messages(messages)
     output,error_code,token_usage = llm.parse(functions=[],process_id=0)

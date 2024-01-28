@@ -191,17 +191,21 @@ if __name__=='__main__':
     method = args.method
     output = args.output
     answer_dict = {}
-    print(os.listdir(answer_dir))
+    # print(os.listdir(answer_dir))
     for filename in os.listdir(answer_dir):
         if filename.endswith('.json') and method in filename:
             qid = filename.split('_')[0]
             try:
                 data_dict = json.load(open(os.path.join(answer_dir,filename)))
             except:
+                print(qid)
+                os.remove(os.path.join(answer_dir,filename))
                 continue
             if not data_dict['answer_generation']['valid_data']:
                 answer_dict[qid] = process_invalid_data(method,data_dict)
             else:
                 answer_dict[qid] = process_valid_data(method,data_dict['answer_generation'])
+    
+    print("Total {} answers".format(len(answer_dict)))
                 
     json.dump(answer_dict,open(output,'w'))

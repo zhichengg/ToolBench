@@ -132,7 +132,10 @@ You have access of the following tools:\n'''
             unduplicated_reflection[standardize_tool_name] = tool_des
 
         for k,(standardize_tool_name, tool_des) in enumerate(unduplicated_reflection.items()):
-            striped = tool_des[:512].replace('\n','').strip()
+            try:
+                striped = tool_des[:512].replace('\n','').strip()
+            except:
+                striped = ""
             if striped == "":
                 striped = "None"
             self.task_description += f"{k+1}.{standardize_tool_name}: {striped}\n"
@@ -147,7 +150,7 @@ You have access of the following tools:\n'''
         return tool_descriptions
     
     def retrieve_rapidapi_tools(self, query, top_k, jsons_path):
-        retrieved_tools = self.retriever.retrieving(query, top_k=top_k)
+        retrieved_tools = self.retriever.retxrieving(query, top_k=top_k)
         query_json = {"api_list":[]}
         for tool_dict in retrieved_tools:
             if len(query_json["api_list"]) == top_k:
@@ -365,7 +368,24 @@ You have access of the following tools:\n'''
                                 'accept': 'application/json',
                                 'Content-Type': 'application/json'
                             }
-                        response = requests.post(self.service_url, json=payload, headers=headers, timeout=15)
+                        if self.service_url.endswith('rapidapi'):
+                            print("Failure rate is :", os.getenv("FAILURE_RATE", 0))
+                            # random.seed(42)
+                            random_failure = random.random()
+                            print("Random Failure rate is: ", random_failure)
+                            if random_failure < float(os.getenv("FAILURE_RATE", 0)):
+                                # print("Random Failure...")
+                                return_result = {
+                                    "error": "Calling Failure...",
+                                    "response": "Random Failure..."
+                                }
+                                return json.dumps(return_result), 12
+                        # import pdb; pdb.set_trace()
+                        try:
+                            timeout = None if self.service_url.endswith('fake_rapidapi') else 15
+                            response = requests.post(self.service_url, json=payload, headers=headers, timeout=timeout)
+                        except requests.exceptions.Timeout:
+                            return json.dumps({"error": f"Timeout error...", "response": ""}), 5
                         if response.status_code != 200:
                             print(response)
                             # import pdb; pdb.set_trace()

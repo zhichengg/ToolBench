@@ -116,16 +116,23 @@ if __name__ == "__main__":
         
     reference_model = args.reference_model
     output_list = []
+    # import pdb; pdb.set_trace()
     for test_set in set(test_sets).intersection(set(args.test_set)):
         reference_path = f"{args.converted_answer_path}/{reference_model}/{test_set}.json"
         test_ids = list(json.load(open(os.path.join(args.test_ids, test_set+".json"), "r")).keys())
         reference_examples = json.load(open(reference_path, "r"))
+        # import pdb; pdb.set_trace()
+        save_path = f"{args.save_path}/{test_set}_{reference_model}.json"
+        if not os.path.exists(os.path.dirname(args.save_path)):
+            os.makedirs(os.path.dirname(args.save_path))
         if os.path.exists(f"{args.save_path}/{test_set}_{reference_model}.json") and not args.overwrite:
             existed_ids = list(json.load(open(f"{args.save_path}/{test_set}_{reference_model}.json", "r")).keys())
             label_cnt = json.load(open(f"{args.save_path}/{test_set}_{reference_model}.json", "r"))
         else:
             existed_ids = []
             label_cnt = {}
+
+        print("Total number of items: ", len(reference_examples))
         
         with ThreadPoolExecutor(args.max_eval_threads) as pool:
             future = []

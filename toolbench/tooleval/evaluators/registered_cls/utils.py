@@ -4,7 +4,8 @@ from typing import List,Dict
 import requests
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
-from openai import OpenAI
+# from openai import OpenAI
+import openai
 
 
 import random
@@ -57,9 +58,9 @@ class OpenaiPoolRequest:
         kwargs['api_key'] = item['api_key']
         if item.get('organization',None) is not None:
             kwargs['organization'] = item['organization'] 
-        client = OpenAI(api_key=kwargs['api_key'], base_url="https://api.01ww.xyz/v1")
+        # client = OpenAI(api_key=kwargs['api_key'], base_url="https://api.01ww.xyz/v1")
         kwargs.pop('api_key')
-        return client.chat.completions.create(messages=messages, **kwargs)
+        return openai.ChatCompletion.create(messages=messages, **kwargs)
     
     def __call__(self,messages,**kwargs):
         return self.request(messages,**kwargs)

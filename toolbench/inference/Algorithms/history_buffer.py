@@ -10,9 +10,9 @@ import numpy as np
 import atexit
 import time
 import openai
-from openai import OpenAI
+import openai
 
-client = OpenAI(api_key="openchat", base_url="https://api.01ww.xyz/v1")
+# client = OpenAI(api_key="openchat", base_url="https://api.01ww.xyz/v1")
 from tqdm import tqdm
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
@@ -66,7 +66,8 @@ class Buffer:
         # TODO: The 'openai.api_base' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(api_base="https://api.01ww.xyz/v1")'
         # openai.api_base="https://api.01ww.xyz/v1"
         input = input.replace("\n", " ")
-        response = client.embeddings.create(input = [input], model=model)
+        # response = openai.embeddings.create(input = [input], model=model)
+        response = openai.Embedding.create(input = [input], model=model)
         return response.data[0].embedding
 
 

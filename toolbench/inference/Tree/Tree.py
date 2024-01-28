@@ -166,10 +166,10 @@ class tree_node:
                 while use_messages[-1]["role"] == "user":
                     use_messages = use_messages[:-1]
                 use_messages = sift_first_invalid_message(use_messages)
-                # if use_messages[-1]["role"] == "assistant":
-                #     result = [use_messages] + result
-                if use_messages[-1]["role"] == "system" and use_messages[-2]["role"] == "assistant":
+                if use_messages[-1]["role"] == "assistant":
                     result = [use_messages] + result
+                # if use_messages[-1]["role"] == "system" and use_messages[-2]["role"] == "assistant":
+                #     result = [use_messages] + result
             now_node = now_node.father
         return result
 
